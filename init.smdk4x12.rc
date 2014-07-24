@@ -1,0 +1,136 @@
+import init.smdk4x12.usb.rc
+
+on init
+
+    # See storage config details at http://source.android.com/tech/storage/
+    mkdir /mnt/media_rw/extSdCard 0700 media_rw media_rw
+    mkdir /mnt/media_rw/UsbDriveA 0700 media_rw media_rw
+    mkdir /mnt/media_rw/UsbDriveB 0700 media_rw media_rw
+    mkdir /mnt/media_rw/UsbDriveC 0700 media_rw media_rw
+    mkdir /mnt/media_rw/UsbDriveD 0700 media_rw media_rw
+    mkdir /mnt/media_rw/UsbDriveE 0700 media_rw media_rw
+    mkdir /mnt/media_rw/UsbDriveF 0700 media_rw media_rw
+    
+    # See storage config details at http://source.android.com/tech/storage/
+    mkdir /mnt/shell/emulated 0700 shell shell
+    mkdir /storage/emulated 0555 root root    
+
+    export EXTERNAL_STORAGE /storage/emulated/legacy
+    export EMULATED_STORAGE_SOURCE /mnt/shell/emulated
+    export EMULATED_STORAGE_TARGET /storage/emulated
+
+    # Support legacy paths
+    symlink /storage/emulated/legacy /sdcard
+    symlink /storage/emulated/legacy /mnt/sdcard
+    symlink /storage/emulated/legacy /storage/sdcard0
+    symlink /mnt/shell/emulated/0 /storage/emulated/legacy
+
+    # map "real" external storages paths also in same way. backwards compatibility.
+    symlink /storage/extSdCard /mnt/extSdCard
+    symlink /storage/UsbDriveA /mnt/UsbDriveA
+    symlink /storage/UsbDriveB /mnt/UsbDriveB
+    symlink /storage/UsbDriveC /mnt/UsbDriveC
+    symlink /storage/UsbDriveD /mnt/UsbDriveD
+    symlink /storage/UsbDriveE /mnt/UsbDriveE
+    symlink /storage/UsbDriveF /mnt/UsbDriveF
+
+    export SECONDARY_STORAGE /storage/extSdCard
+    
+    mkdir /storage/extSdCard 0700 root root
+    mkdir /storage/UsbDriveA 0700 root root
+    mkdir /storage/UsbDriveB 0700 root root
+    mkdir /storage/UsbDriveC 0700 root root
+    mkdir /storage/UsbDriveD 0700 root root
+    mkdir /storage/UsbDriveE 0700 root root
+    mkdir /storage/UsbDriveF 0700 root root
+
+on post-fs-data
+    # we will remap this as /mnt/sdcard with the sdcard fuse tool
+    mkdir /data/media 0770 media_rw media_rw
+    chown media_rw media_rw /data/media
+
+    setprop vold.post_fs_data_done 1
+
+    # make directory for DRM
+    mkdir /data/app/mcRegistry 0755 root root
+
+on boot
+    setprop ro.build.product smdk4x12
+    setprop ro.product.device smdk4x12
+    setprop ro.radio.noril yes
+
+on fs
+    mount_all /fstab.smdk4x12
+    setprop ro.crypto.fuse_sdcard true
+
+# MTP device permission
+	chmod 0660 /dev/usb_mtp_gadget
+	chown system system /dev/usb_mtp_gadget
+
+# terminal mode
+    chmod 0660 /sys/class/android_usb/android0/terminal_version
+    chown system system /sys/class/android_usb/android0/terminal_version
+
+# sua version info
+    chmod 0660 /sys/class/android_usb/android0/f_mass_storage/sua_version_info
+    chown system system /sys/class/android_usb/android0/f_mass_storage/sua_version_info
+
+# for datarouter
+    chown system system /dev/dun
+    chown system system /dev/ttyGS0
+    chown system system /dev/ttyGS1
+    chown system system /dev/ttyGS2
+    chown system system /dev/ttyGS3
+
+# Permissions for backlight
+    chmod 0666 /sys/class/backlight/pwm-backlight.0/brightness
+    chown system system /sys/class/backlight/pwm-backlight.0/brightness
+
+    # copy DRM binary
+    copy /system/app/mcRegistry/00060308060501020000000000000000.tlbin /data/app/mcRegistry/00060308060501020000000000000000.tlbin
+    copy /system/app/FFFFFFFF000000000000000000000001.drbin /data/app/FFFFFFFF000000000000000000000001.drbin
+    copy /system/app/SAMSUNG_EXYNOS4X12_000000000001.kbox /data/app/SAMSUNG_EXYNOS4X12_000000000001.kbox
+    copy /system/app/ecm.dat /data/app/ecm.dat
+    copy /system/app/emm.dat /data/app/emm.dat
+    copy /system/app/wv_test /data/app/wv_test
+
+    chmod 0555 /data/app/FFFFFFFF000000000000000000000001.drbin
+    chmod 0555 /data/app/mcRegistry/00060308060501020000000000000000.tlbin
+
+# virtual sdcard daemon running as media_rw (1023)
+service sdcard /system/bin/sdcard -u 1023 -g 1023 -l /data/media /mnt/shell/emulated
+    class late_start
+    
+    
+service fuse_extSdCard /system/bin/sdcard -u 1023 -g 1023 -w 1023 -d /mnt/media_rw/extSdCard /storage/extSdCard
+    class late_start
+    disabled
+
+service fuse_UsbDriveA /system/bin/sdcard -u 1023 -g 1023 -d /mnt/media_rw/UsbDriveA /storage/UsbDriveA
+    class late_start
+    disabled
+
+service fuse_UsbDriveB /system/bin/sdcard -u 1023 -g 1023 -d /mnt/media_rw/UsbDriveB /storage/UsbDriveB
+    class late_start
+    disabled
+
+service fuse_UsbDriveC /system/bin/sdcard -u 1023 -g 1023 -d /mnt/media_rw/UsbDriveC /storage/UsbDriveC
+    class late_start
+    disabled
+
+service fuse_UsbDriveD /system/bin/sdcard -u 1023 -g 1023 -d /mnt/media_rw/UsbDriveD /storage/UsbDriveD
+    class late_start
+    disabled
+
+service fuse_UsbDriveE /system/bin/sdcard -u 1023 -g 1023 -d /mnt/media_rw/UsbDriveE /storage/UsbDriveE
+    class late_start
+    disabled
+
+service fuse_UsbDriveF /system/bin/sdcard -u 1023 -g 1023 -d /mnt/media_rw/UsbDriveF /storage/UsbDriveF
+    class late_start
+    disabled
+
+#service mcDriverDaemon /system/bin/mcDriverDaemon -r /data/app/FFFFFFFF000000000000000000000001.drbin
+#    class main
+#    user system
+#    group system
